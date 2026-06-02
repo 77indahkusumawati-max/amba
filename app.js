@@ -450,19 +450,23 @@ function downloadStruk() {
     const orderId = document.getElementById('qrisOrderId').textContent;
     const total = document.getElementById('qrisTotal').textContent;
     const strukText = document.getElementById('qrcode').innerText;
-    
     const text = `STMJ NINGRAT\n${strukText}`;
     
     const blob = new Blob([text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
+    
     const a = document.createElement('a');
     a.href = url;
     a.download = `Struk_${orderId}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
     
+    setTimeout(() => {
+        window.open(url, '_blank');
+    }, 500);
+    
+    URL.revokeObjectURL(url);
     showToast('Struk didownload! 📥');
 }
 
@@ -477,16 +481,22 @@ async function shareStruk() {
                 title: 'Struk STMJ Ningrat',
                 text: text
             });
+            return;
         } catch (err) {
-            console.log('Share dibatalkan');
+            console.log('Native share gagal');
         }
-    } else {
-        navigator.clipboard.writeText(text).then(() => {
-            showToast('Struk dicopy! 📋');
-        }).catch(() => {
-            showToast('Gagal share!', 'error');
-        });
     }
+    
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('Struk dicopy! Membuka WhatsApp... 📋');
+        const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+        setTimeout(() => {
+            window.open(waUrl, '_blank');
+        }, 1000);
+    }).catch(() => {
+        const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+        window.open(waUrl, '_blank');
+    });
 }
 
 function closeQRIS() {
