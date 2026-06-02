@@ -101,12 +101,8 @@
     <!-- MAIN CONTENT -->
     <main class="container mx-auto px-4 py-6">
         
-        <!-- ============================================ -->
         <!-- MODE: MENU -->
-        <!-- ============================================ -->
         <div id="menuMode">
-            
-            <!-- Search Bar -->
             <div class="mb-4 max-w-2xl mx-auto">
                 <div class="relative">
                     <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
@@ -114,42 +110,24 @@
                 </div>
             </div>
 
-            <!-- Tombol Tambah Menu -->
             <div class="flex justify-end mb-4 max-w-2xl mx-auto">
                 <button onclick="showAddMenuModal()" class="bg-green-600 text-white px-5 py-3 rounded-xl font-bold hover:bg-green-700 transition shadow-lg text-sm">
                     <i class="fas fa-plus-circle mr-2"></i>Tambah Menu
                 </button>
             </div>
 
-            <!-- Category Filter -->
             <div class="flex gap-2 mb-6 overflow-x-auto pb-2" id="categoryFilter">
-                <button onclick="filterByCategory('all')" class="category-btn active px-4 py-2 rounded-full font-semibold whitespace-nowrap transition text-sm">
-                    🍵 Semua
-                </button>
-                <button onclick="filterByCategory('stmj-ayam')" class="category-btn px-4 py-2 rounded-full font-semibold whitespace-nowrap transition text-sm">
-                    🐔 STMJ Ayam
-                </button>
-                <button onclick="filterByCategory('stmj-bebek')" class="category-btn px-4 py-2 rounded-full font-semibold whitespace-nowrap transition text-sm">
-                    🦆 STMJ Bebek
-                </button>
-                <button onclick="filterByCategory('susu')" class="category-btn px-4 py-2 rounded-full font-semibold whitespace-nowrap transition text-sm">
-                    🥛 Susu
-                </button>
-                <button onclick="filterByCategory('rempah')" class="category-btn px-4 py-2 rounded-full font-semibold whitespace-nowrap transition text-sm">
-                    🌿 Rempah
-                </button>
-                <button onclick="filterByCategory('minuman')" class="category-btn px-4 py-2 rounded-full font-semibold whitespace-nowrap transition text-sm">
-                    👑 Minuman
-                </button>
-                <button onclick="filterByCategory('roti')" class="category-btn px-4 py-2 rounded-full font-semibold whitespace-nowrap transition text-sm">
-                    🍞 Roti
-                </button>
+                <button onclick="filterByCategory('all')" class="category-btn active px-4 py-2 rounded-full font-semibold whitespace-nowrap transition text-sm">🍵 Semua</button>
+                <button onclick="filterByCategory('stmj-ayam')" class="category-btn px-4 py-2 rounded-full font-semibold whitespace-nowrap transition text-sm">🐔 STMJ Ayam</button>
+                <button onclick="filterByCategory('stmj-bebek')" class="category-btn px-4 py-2 rounded-full font-semibold whitespace-nowrap transition text-sm">🦆 STMJ Bebek</button>
+                <button onclick="filterByCategory('susu')" class="category-btn px-4 py-2 rounded-full font-semibold whitespace-nowrap transition text-sm">🥛 Susu</button>
+                <button onclick="filterByCategory('rempah')" class="category-btn px-4 py-2 rounded-full font-semibold whitespace-nowrap transition text-sm">🌿 Rempah</button>
+                <button onclick="filterByCategory('minuman')" class="category-btn px-4 py-2 rounded-full font-semibold whitespace-nowrap transition text-sm">👑 Minuman</button>
+                <button onclick="filterByCategory('roti')" class="category-btn px-4 py-2 rounded-full font-semibold whitespace-nowrap transition text-sm">🍞 Roti</button>
             </div>
 
-            <!-- Menu Grid -->
             <div id="menuGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"></div>
             
-            <!-- Cart Button -->
             <div class="fixed bottom-4 right-4 z-30">
                 <button onclick="viewCart()" class="bg-amber-900 text-white w-16 h-16 rounded-full shadow-2xl flex items-center justify-center relative hover:bg-amber-950 transition transform hover:scale-110">
                     <i class="fas fa-shopping-cart text-2xl"></i>
@@ -158,12 +136,8 @@
             </div>
         </div>
         
-        <!-- ============================================ -->
         <!-- MODE: PESANAN -->
-        <!-- ============================================ -->
         <div id="ordersMode" class="hidden">
-            
-            <!-- Stats -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                 <div class="bg-white rounded-xl shadow-md p-4 border-l-4 border-yellow-500">
                     <p class="text-gray-500 text-xs font-semibold uppercase">Menunggu</p>
@@ -183,7 +157,6 @@
                 </div>
             </div>
             
-            <!-- Filter & Action Buttons -->
             <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
                 <div class="flex gap-2 overflow-x-auto">
                     <button onclick="filterOrders('all')" class="filter-tab active px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap">📋 Semua</button>
@@ -201,7 +174,6 @@
                 </div>
             </div>
             
-            <!-- Orders List -->
             <div id="ordersList" class="space-y-3"></div>
             <div id="dailyTotal"></div>
             <div id="emptyOrders" class="text-center py-12 hidden">
@@ -236,6 +208,7 @@
                 <p class="text-xs text-gray-500">ID: <span id="qrisOrderId" class="font-mono"></span></p>
             </div>
             <button onclick="downloadStruk()" class="w-full bg-amber-600 text-white py-3 rounded-xl font-bold hover:bg-amber-700 transition mb-2">📥 Download Struk</button>
+            <button onclick="shareStruk()" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition mb-2">📤 Share Struk</button>
             <button onclick="closeQRIS()" class="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-300 transition">Tutup</button>
         </div>
     </div>
@@ -247,9 +220,7 @@
                 <h2 class="text-xl font-bold" id="menuFormTitle">➕ Tambah Menu</h2>
                 <button onclick="closeMenuForm()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
             </div>
-            
             <input type="hidden" id="editMenuId">
-            
             <div class="space-y-3">
                 <div>
                     <label class="block text-sm font-semibold mb-1">Nama Menu</label>
@@ -281,15 +252,17 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-semibold mb-1">URL Gambar</label>
-                    <input type="text" id="menuImage" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-amber-500 outline-none" placeholder="https://...">
+                     <label class="block text-sm font-semibold mb-1">Gambar Menu</label>
+                     <input type="file" id="menuImageFile" accept="image/*" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-amber-500 outline-none bg-white" onchange="previewImage()">
+                     <img id="imagePreview" class="mt-2 rounded-xl hidden" style="max-height:150px; width:100%; object-fit:cover;">
+                     <input type="hidden" id="menuImage" value="">
+                      <p class="text-xs text-gray-400 mt-1">Klik untuk pilih gambar dari HP/Desktop</p>
                 </div>
                 <div>
                     <label class="block text-sm font-semibold mb-1">Badge</label>
                     <input type="text" id="menuBadge" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-amber-500 outline-none" placeholder="🔥 Best Seller">
                 </div>
             </div>
-            
             <div class="flex gap-3 mt-6">
                 <button onclick="closeMenuForm()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-300 transition">Batal</button>
                 <button onclick="saveMenu()" class="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition">
@@ -333,14 +306,11 @@
         </div>
     </div>
 
-    <!-- AUDIO -->
     <audio id="notificationSound" preload="auto">
         <source src="https://www.soundjay.com/buttons/sounds/button-09.mp3" type="audio/mpeg">
     </audio>
 
-    <!-- SCRIPTS -->
     <script src="app.js"></script>
-    
     <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {

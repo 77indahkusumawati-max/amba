@@ -26,7 +26,7 @@ const menuData = [
     { id: 17, name: "Wedang Telang", description: "Bunga telang biru cantik", price: 10000, category: "minuman", image: "https://files.catbox.moe/1xb288.jpeg", badge: "💙 Cantik" }
 ];
 
-// =============================================
+// ============================================
 // STATE
 // ============================================
 let cart = JSON.parse(localStorage.getItem('stmj_cart')) || [];
@@ -136,6 +136,28 @@ function filterMenu() {
 }
 
 // ============================================
+// IMAGE UPLOAD PREVIEW
+// ============================================
+function previewImage() {
+    const file = document.getElementById('menuImageFile').files[0];
+    const preview = document.getElementById('imagePreview');
+    const imageInput = document.getElementById('menuImage');
+    
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.classList.remove('hidden');
+            imageInput.value = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    } else {
+        preview.classList.add('hidden');
+        imageInput.value = '';
+    }
+}
+
+// ============================================
 // MENU CRUD
 // ============================================
 function showAddMenuModal() {
@@ -149,6 +171,8 @@ function showAddMenuModal() {
     document.getElementById('menuCategory').value = 'minuman';
     document.getElementById('menuImage').value = '';
     document.getElementById('menuBadge').value = '';
+    document.getElementById('menuImageFile').value = '';
+    document.getElementById('imagePreview').classList.add('hidden');
     document.getElementById('menuFormModal').classList.remove('hidden');
 }
 
@@ -172,6 +196,16 @@ async function showEditMenuModal(id) {
     document.getElementById('menuCategory').value = product.category || 'minuman';
     document.getElementById('menuImage').value = product.image || '';
     document.getElementById('menuBadge').value = product.badge || '';
+    document.getElementById('menuImageFile').value = '';
+    
+    const preview = document.getElementById('imagePreview');
+    if (product.image) {
+        preview.src = product.image;
+        preview.classList.remove('hidden');
+    } else {
+        preview.classList.add('hidden');
+    }
+    
     document.getElementById('menuFormModal').classList.remove('hidden');
 }
 
@@ -187,7 +221,7 @@ async function saveMenu() {
         price: parseInt(document.getElementById('menuPrice').value) || 0,
         stock: parseInt(document.getElementById('menuStock').value) || 99,
         category: document.getElementById('menuCategory').value,
-        image: document.getElementById('menuImage').value.trim(),
+        image: document.getElementById('menuImage').value,
         badge: document.getElementById('menuBadge').value.trim()
     };
     
@@ -354,10 +388,11 @@ function createOrder() {
     
     const orderId = 'STMJ-' + Date.now().toString().slice(-8);
     const total = calculateTotal();
+    const orderItems = [...cart];
     
     orders.unshift({
         id: orderId,
-        items: [...cart],
+        items: orderItems,
         total: total,
         status: 'pending',
         timestamp: new Date().toISOString(),
@@ -365,7 +400,7 @@ function createOrder() {
     });
     
     localStorage.setItem('stmj_orders', JSON.stringify(orders));
-    showStruk(orderId, total);
+    showStruk(orderId, total, orderItems);
     
     cart = [];
     saveCart();
@@ -376,9 +411,20 @@ function createOrder() {
     loadOrders();
 }
 
-function showStruk(orderId, total) {
+function showStruk(orderId, total, orderItems) {
     document.getElementById('qrisTotal').textContent = 'Rp ' + total.toLocaleString();
     document.getElementById('qrisOrderId').textContent = orderId;
+    
+    let itemsHtml = '';
+    if (orderItems && orderItems.length > 0) {
+        itemsHtml = orderItems.map(item => `
+            <div style="display:flex; justify-content:space-between;">
+                <span>${item.quantity}x ${item.name}</span>
+                <span>Rp ${(item.price * item.quantity).toLocaleString()}</span>
+            </div>
+        `).join('');
+    }
+    
     document.getElementById('qrcode').innerHTML = `
         <div style="font-family:monospace; font-size:11px; line-height:1.5;">
             <div style="text-align:center;">
@@ -388,25 +434,59 @@ function showStruk(orderId, total) {
             <b>No:</b> ${orderId}<br>
             <b>Tgl:</b> ${new Date().toLocaleString('id-ID')}<br>
             <b>Bayar:</b> TUNAI<br>
+            ===============
+            ${itemsHtml}
             ===============<br>
             <b>TOTAL: Rp ${total.toLocaleString()}</b><br>
             ===============<br>
-            <div style="text-align:center; font-size:10px;">Terima Kasih</div>
+            <div style="text-align:center; font-size:10px;">Terima Kasih 🍵</div>
         </div>
     `;
+    
     document.getElementById('qrisModal').classList.remove('hidden');
 }
 
 function downloadStruk() {
     const orderId = document.getElementById('qrisOrderId').textContent;
     const total = document.getElementById('qrisTotal').textContent;
-    const text = `STMJ NINGRAT\n===============\nNo: ${orderId}\nTgl: ${new Date().toLocaleString('id-ID')}\nBayar: TUNAI\n===============\nTOTAL: ${total}\n===============\nTerima Kasih`;
+    const strukText = document.getElementById('qrcode').innerText;
+    
+    const text = `STMJ NINGRAT\n${strukText}`;
     
     const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
+    a.href = url;
     a.download = `Struk_${orderId}.txt`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showToast('Struk didownload! 📥');
+}
+
+async function shareStruk() {
+    const orderId = document.getElementById('qrisOrderId').textContent;
+    const total = document.getElementById('qrisTotal').textContent;
+    const text = `🧾 Struk STMJ Ningrat\nNo: ${orderId}\nTotal: ${total}\n\nTerima Kasih 🍵👑`;
+    
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: 'Struk STMJ Ningrat',
+                text: text
+            });
+        } catch (err) {
+            console.log('Share dibatalkan');
+        }
+    } else {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast('Struk dicopy! 📋');
+        }).catch(() => {
+            showToast('Gagal share!', 'error');
+        });
+    }
 }
 
 function closeQRIS() {
@@ -659,4 +739,4 @@ document.addEventListener('click', (e) => {
     if (e.target.id === 'menuFormModal') closeMenuForm();
 });
 
-console.log('✅ STMJ Ningrat POS ready!')
+console.log('✅ STMJ Ningrat POS ready!');
