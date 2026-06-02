@@ -473,7 +473,19 @@ function downloadStruk() {
 async function shareStruk() {
     const orderId = document.getElementById('qrisOrderId').textContent;
     const total = document.getElementById('qrisTotal').textContent;
-    const text = `🧾 Struk STMJ Ningrat\nNo: ${orderId}\nTotal: ${total}\n\nTerima Kasih 🍵👑`;
+    const strukText = document.getElementById('qrcode').innerText;
+    
+    // Teks lengkap dengan item
+    const text = `🧾 *STRUK STMJ NINGRAT*\n` +
+                 `==============================\n` +
+                 `${strukText}\n` +
+                 `==============================\n` +
+                 `Terima Kasih 🍵👑`;
+    
+    // Teks pendek buat WhatsApp (tanpa markdown)
+    const waText = `🧾 Struk STMJ Ningrat\n` +
+                   `${strukText}\n` +
+                   `Terima Kasih 🍵👑`;
     
     if (navigator.share) {
         try {
@@ -487,16 +499,18 @@ async function shareStruk() {
         }
     }
     
-    navigator.clipboard.writeText(text).then(() => {
+    // Fallback: Copy + buka WhatsApp
+    try {
+        await navigator.clipboard.writeText(waText);
         showToast('Struk dicopy! Membuka WhatsApp... 📋');
-        const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
-        setTimeout(() => {
-            window.open(waUrl, '_blank');
-        }, 1000);
-    }).catch(() => {
-        const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    } catch(e) {
+        showToast('Membuka WhatsApp...');
+    }
+    
+    const waUrl = `https://wa.me/?text=${encodeURIComponent(waText)}`;
+    setTimeout(() => {
         window.open(waUrl, '_blank');
-    });
+    }, 800);
 }
 
 function closeQRIS() {
