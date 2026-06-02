@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STMJ Ningrat - Point of Sale</title>
+    
+    <meta name="theme-color" content="#92400E">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="STMJ Ningrat">
+    <meta name="description" content="Sistem pemesanan STMJ Ningrat - Susu Telor Madu Jahe">
+    
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3126/3126657.png">
+    <link rel="manifest" href="manifest.json">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    
+    <style>
+        .mode-btn {
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        .mode-btn.active {
+            background: #FBBF24;
+            color: #78350F;
+            border-color: #B45309;
+        }
+        .mode-btn:not(.active) {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        .mode-btn:not(.active):hover {
+            background: rgba(255,255,255,0.2);
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-slide-up {
+            animation: slideUp 0.3s ease;
+        }
+        .menu-card {
+            position: relative;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-amber-50 to-yellow-50 min-h-screen">
+    
+    <!-- INSTALL BANNER -->
+    <div id="installBanner" class="hidden fixed bottom-4 left-4 right-4 bg-white rounded-2xl shadow-2xl p-4 z-50 border-2 border-amber-500 animate-slide-up md:left-auto md:right-4 md:w-96">
+        <div class="flex items-center gap-3">
+            <i class="fas fa-download text-3xl text-amber-600"></i>
+            <div class="flex-1">
+                <h3 class="font-bold text-sm">Install STMJ Ningrat</h3>
+                <p class="text-xs text-gray-500">Pasang di HP/Desktop untuk akses cepat</p>
+            </div>
+            <button onclick="installPWA()" class="bg-amber-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-amber-700">Install</button>
+            <button onclick="document.getElementById('installBanner').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">✕</button>
+        </div>
+    </div>
+
+    <!-- OFFLINE BANNER -->
+    <div id="offlineBanner" class="hidden fixed top-0 left-0 right-0 bg-red-500 text-white text-center py-2 text-sm font-semibold z-50">📴 Anda sedang offline</div>
+    
+    <!-- HEADER -->
+    <header class="bg-gradient-to-r from-amber-900 via-amber-800 to-amber-900 text-white shadow-lg sticky top-0 z-40">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-3">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-crown text-3xl text-yellow-400"></i>
+                    <div>
+                        <h1 class="text-2xl font-bold">STMJ Ningrat</h1>
+                        <p class="text-xs text-yellow-300">👑 Susu Telor Madu Jahe</p>
+                    </div>
+                </div>
+                <div class="flex gap-2 bg-black bg-opacity-20 rounded-xl p-1">
+                    <button onclick="switchMode('menu')" id="modeMenuBtn" class="mode-btn active">
+                        <i class="fas fa-mug-hot mr-2"></i>Menu
+                    </button>
+                    <button onclick="switchMode('orders')" id="modeOrdersBtn" class="mode-btn relative">
+                        <i class="fas fa-clipboard-list mr-2"></i>Pesanan
+                        <span id="orderNotif" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="container mx-auto px-4 py-6">
+        
+        <!-- ============================================ -->
+        <!-- MODE: MENU -->
+        <!-- ============================================ -->
+        <div id="menuMode">
+            
+            <!-- Search Bar -->
+            <div class="mb-4 max-w-2xl mx-auto">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" id="searchInput" class="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-gray-200 focus:border-amber-500 outline-none shadow-sm text-lg" placeholder="Cari menu..." oninput="filterMenu()">
+                </div>
+            </div>
+
+            <!-- Tombol Tambah Menu -->
+            <div class="flex justify-end mb-4 max-w-2xl mx-auto">
+                <button onclick="showAddMenuModal()" class="bg-green-600 text-white px-5 py-3 rounded-xl font-bold hover:bg-green-700 transition shadow-lg text-sm">
+                    <i class="fas fa-plus-circle mr-2"></i>Tambah Menu
+                </button>
+            </div>
+
+            <!-- Category Filter -->
+            <div class="flex gap-2 mb-6 overflow-x-auto pb-2" id="categoryFilter">
+                <button onclick="filterByCategory('all')" class="category-btn active px-4 py-2 rounded-full font-semibold whitespace-nowrap transition text-sm">
+                    🍵 Semua
+                </button>
+                <button onclick="filterByCategory('stmj-ayam')" class="category-btn px-4 py-2 rounded-full font-semibold whitespace-nowrap transition text-sm">
+                    🐔 STMJ Ayam
+                </button>
+                <button onclick="filterByCategory('stmj-bebek')" class="category-btn px-4 py-2 rounded-full font-semibold whitespace-nowrap transition text-sm">
+                    🦆 STMJ Bebek
+                </button>
+                <button onclick="filterByCategory('susu')" class="category-btn px-4 py-2 rounded-full font-semibold whitespace-nowrap transition text-sm">
+                    🥛 Susu
+                </button>
+                <button onclick="filterByCategory('rempah')" class="category-btn px-4 py-2 rounded-full font-semibold whitespace-nowrap transition text-sm">
+                    🌿 Rempah
+                </button>
+                <button onclick="filterByCategory('minuman')" class="category-btn px-4 py-2 rounded-full font-semibold whitespace-nowrap transition text-sm">
+                    👑 Minuman
+                </button>
+                <button onclick="filterByCategory('roti')" class="category-btn px-4 py-2 rounded-full font-semibold whitespace-nowrap transition text-sm">
+                    🍞 Roti
+                </button>
+            </div>
+
+            <!-- Menu Grid -->
+            <div id="menuGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"></div>
+            
+            <!-- Cart Button -->
+            <div class="fixed bottom-4 right-4 z-30">
+                <button onclick="viewCart()" class="bg-amber-900 text-white w-16 h-16 rounded-full shadow-2xl flex items-center justify-center relative hover:bg-amber-950 transition transform hover:scale-110">
+                    <i class="fas fa-shopping-cart text-2xl"></i>
+                    <span id="cart-count" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold hidden">0</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- ============================================ -->
+        <!-- MODE: PESANAN -->
+        <!-- ============================================ -->
+        <div id="ordersMode" class="hidden">
+            
+            <!-- Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                <div class="bg-white rounded-xl shadow-md p-4 border-l-4 border-yellow-500">
+                    <p class="text-gray-500 text-xs font-semibold uppercase">Menunggu</p>
+                    <p class="text-2xl font-bold text-yellow-600" id="pendingCount">0</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-md p-4 border-l-4 border-blue-500">
+                    <p class="text-gray-500 text-xs font-semibold uppercase">Diproses</p>
+                    <p class="text-2xl font-bold text-blue-600" id="processingCount">0</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-md p-4 border-l-4 border-green-500">
+                    <p class="text-gray-500 text-xs font-semibold uppercase">Siap</p>
+                    <p class="text-2xl font-bold text-green-600" id="readyCount">0</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-md p-4 border-l-4 border-purple-500">
+                    <p class="text-gray-500 text-xs font-semibold uppercase">Pendapatan</p>
+                    <p class="text-lg font-bold text-purple-600" id="totalRevenue">Rp 0</p>
+                </div>
+            </div>
+            
+            <!-- Filter & Action Buttons -->
+            <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+                <div class="flex gap-2 overflow-x-auto">
+                    <button onclick="filterOrders('all')" class="filter-tab active px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap">📋 Semua</button>
+                    <button onclick="filterOrders('pending')" class="filter-tab px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap">⏳ Menunggu</button>
+                    <button onclick="filterOrders('processing')" class="filter-tab px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap">🔥 Diproses</button>
+                    <button onclick="filterOrders('ready')" class="filter-tab px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap">✅ Siap</button>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="refreshOrders()" class="bg-amber-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-amber-700 transition text-sm">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh
+                    </button>
+                    <button onclick="deleteAllOrders()" class="bg-red-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-red-700 transition text-sm">
+                        <i class="fas fa-trash-alt mr-2"></i>Hapus Semua
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Orders List -->
+            <div id="ordersList" class="space-y-3"></div>
+            <div id="dailyTotal"></div>
+            <div id="emptyOrders" class="text-center py-12 hidden">
+                <i class="fas fa-inbox text-6xl text-gray-300 mb-4"></i>
+                <h3 class="text-xl font-bold text-gray-500">Belum ada pesanan</h3>
+            </div>
+        </div>
+    </main>
+
+    <!-- CART MODAL -->
+    <div id="cartModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white border-b p-4 rounded-t-2xl flex justify-between items-center">
+                <h2 class="text-xl font-bold"><i class="fas fa-shopping-cart text-amber-600 mr-2"></i>Keranjang</h2>
+                <button onclick="closeCart()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <div id="cartContent" class="p-4"></div>
+        </div>
+    </div>
+
+    <!-- STRUK MODAL -->
+    <div id="qrisModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-5 text-center">
+            <i class="fas fa-receipt text-green-500 text-4xl mb-2"></i>
+            <h2 class="text-xl font-bold mb-1">🧾 Struk Pembayaran</h2>
+            <p class="text-gray-500 text-sm mb-3">Tunjukkan struk ini ke kasir</p>
+            <div class="bg-gray-50 rounded-xl p-3 mb-3">
+                <div id="qrcode"></div>
+            </div>
+            <div class="bg-yellow-50 rounded-xl p-3 mb-3">
+                <p class="font-bold">Total: <span id="qrisTotal" class="text-lg"></span></p>
+                <p class="text-xs text-gray-500">ID: <span id="qrisOrderId" class="font-mono"></span></p>
+            </div>
+            <button onclick="downloadStruk()" class="w-full bg-amber-600 text-white py-3 rounded-xl font-bold hover:bg-amber-700 transition mb-2">📥 Download Struk</button>
+            <button onclick="closeQRIS()" class="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-300 transition">Tutup</button>
+        </div>
+    </div>
+
+    <!-- ADD/EDIT MENU MODAL -->
+    <div id="menuFormModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold" id="menuFormTitle">➕ Tambah Menu</h2>
+                <button onclick="closeMenuForm()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            
+            <input type="hidden" id="editMenuId">
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Nama Menu</label>
+                    <input type="text" id="menuName" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-amber-500 outline-none" placeholder="Contoh: STMJ Original">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Deskripsi</label>
+                    <textarea id="menuDesc" rows="2" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-amber-500 outline-none" placeholder="Deskripsi..."></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">Harga (Rp)</label>
+                        <input type="number" id="menuPrice" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-amber-500 outline-none" placeholder="10000">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">Stok</label>
+                        <input type="number" id="menuStock" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-amber-500 outline-none" value="99">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Kategori</label>
+                    <select id="menuCategory" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-amber-500 outline-none bg-white">
+                        <option value="stmj-ayam">🐔 STMJ Ayam</option>
+                        <option value="stmj-bebek">🦆 STMJ Bebek</option>
+                        <option value="susu">🥛 Susu</option>
+                        <option value="rempah">🌿 Rempah</option>
+                        <option value="minuman">👑 Minuman</option>
+                        <option value="roti">🍞 Roti</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">URL Gambar</label>
+                    <input type="text" id="menuImage" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-amber-500 outline-none" placeholder="https://...">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Badge</label>
+                    <input type="text" id="menuBadge" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-amber-500 outline-none" placeholder="🔥 Best Seller">
+                </div>
+            </div>
+            
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeMenuForm()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-300 transition">Batal</button>
+                <button onclick="saveMenu()" class="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition">
+                    <i class="fas fa-save mr-2"></i><span id="saveBtnText">Simpan</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DELETE MENU MODAL -->
+    <div id="deleteMenuModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-xs w-full p-6 text-center animate-slide-up">
+            <i class="fas fa-trash-alt text-red-500 text-5xl mb-3"></i>
+            <h2 class="text-xl font-bold mb-2">Hapus Menu?</h2>
+            <p class="text-gray-500 text-sm mb-6" id="deleteMenuMessage">Menu akan dihapus permanen!</p>
+            <div class="flex gap-3">
+                <button onclick="closeDeleteMenuModal()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-300 transition">Batal</button>
+                <button onclick="confirmDeleteMenu()" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition">Hapus</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DELETE ALL MODAL -->
+    <div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-xs w-full p-6 text-center animate-slide-up">
+            <i class="fas fa-exclamation-triangle text-red-500 text-5xl mb-3"></i>
+            <h2 class="text-xl font-bold mb-2">Hapus Semua?</h2>
+            <p class="text-gray-500 text-sm mb-6" id="deleteMessage">Semua pesanan akan dihapus permanen!</p>
+            <div class="flex gap-3">
+                <button onclick="closeDeleteModal()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-300 transition">Batal</button>
+                <button onclick="confirmDeleteAll()" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition">Hapus Semua</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast" class="fixed bottom-20 right-4 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <div class="bg-gray-800 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 text-sm">
+            <i id="toastIcon" class="fas fa-check-circle text-green-400"></i>
+            <span id="toastMessage"></span>
+        </div>
+    </div>
+
+    <!-- AUDIO -->
+    <audio id="notificationSound" preload="auto">
+        <source src="https://www.soundjay.com/buttons/sounds/button-09.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- SCRIPTS -->
+    <script src="app.js"></script>
+    
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').then(r => console.log('✅ SW')).catch(e => console.log(e));
+        });
+    }
+    
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        document.getElementById('installBanner').classList.remove('hidden');
+    });
+    
+    function installPWA() {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then(r => {
+                deferredPrompt = null;
+                document.getElementById('installBanner').classList.add('hidden');
+            });
+        }
+    }
+    
+    window.addEventListener('appinstalled', () => {
+        document.getElementById('installBanner').classList.add('hidden');
+    });
+    
+    window.addEventListener('online', () => document.getElementById('offlineBanner').classList.add('hidden'));
+    window.addEventListener('offline', () => document.getElementById('offlineBanner').classList.remove('hidden'));
+    </script>
+</body>
+</html>
