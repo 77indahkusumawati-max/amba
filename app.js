@@ -448,50 +448,29 @@ function showStruk(orderId, total, orderItems) {
 
 function downloadStruk() {
     const orderId = document.getElementById('qrisOrderId').textContent;
-    const total = document.getElementById('qrisTotal').textContent;
     const strukText = document.getElementById('qrcode').innerText;
     const text = `STMJ NINGRAT\n${strukText}`;
     
-    const blob = new Blob([text], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Struk_${orderId}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('Struk dicopy! 📋');
+    }).catch(() => {
+        showToast('Gagal copy struk', 'error');
+    });
     
     setTimeout(() => {
-        window.open(url, '_blank');
-    }, 500);
-    
-    URL.revokeObjectURL(url);
-    showToast('Struk didownload! 📥');
+        closeQRIS();
+    }, 1500);
 }
 
 async function shareStruk() {
-    const orderId = document.getElementById('qrisOrderId').textContent;
-    const total = document.getElementById('qrisTotal').textContent;
     const strukText = document.getElementById('qrcode').innerText;
-    
-    // Teks lengkap dengan item
-    const text = `🧾 *STRUK STMJ NINGRAT*\n` +
-                 `==============================\n` +
-                 `${strukText}\n` +
-                 `==============================\n` +
-                 `Terima Kasih 🍵👑`;
-    
-    // Teks pendek buat WhatsApp (tanpa markdown)
-    const waText = `🧾 Struk STMJ Ningrat\n` +
-                   `${strukText}\n` +
-                   `Terima Kasih 🍵👑`;
+    const waText = `🧾 Struk STMJ Ningrat\n${strukText}\nTerima Kasih 🍵👑`;
     
     if (navigator.share) {
         try {
             await navigator.share({
                 title: 'Struk STMJ Ningrat',
-                text: text
+                text: waText
             });
             return;
         } catch (err) {
@@ -499,17 +478,15 @@ async function shareStruk() {
         }
     }
     
-    // Fallback: Copy + buka WhatsApp
     try {
         await navigator.clipboard.writeText(waText);
-        showToast('Struk dicopy! Membuka WhatsApp... 📋');
+        showToast('Dicopy! Membuka WhatsApp... 📋');
     } catch(e) {
-        showToast('Membuka WhatsApp...');
+        showToast('Gagal!', 'error');
     }
     
-    const waUrl = `https://wa.me/?text=${encodeURIComponent(waText)}`;
     setTimeout(() => {
-        window.open(waUrl, '_blank');
+        window.open(`https://wa.me/?text=${encodeURIComponent(waText)}`, '_blank');
     }, 800);
 }
 
