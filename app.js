@@ -27,6 +27,14 @@ const menuData = [
 ];
 
 // ============================================
+// FUNGSI HELPER: AMBIL DATA PRODUK TERBARU
+// ============================================
+function getProducts() {
+    const savedMenu = localStorage.getItem('stmj_menuData');
+    return savedMenu ? JSON.parse(savedMenu) : menuData;
+}
+
+// ============================================
 // STATE
 // ============================================
 let cart = JSON.parse(localStorage.getItem('stmj_cart')) || [];
@@ -62,7 +70,7 @@ function switchMode(mode) {
 }
 
 // ============================================
-// RENDER MENU
+// RENDER MENU (API + FALLBACK)
 // ============================================
 async function renderMenu() {
     const menuGrid = document.getElementById('menuGrid');
@@ -72,9 +80,13 @@ async function renderMenu() {
     try {
         const response = await fetch(API_URL + '/products');
         const result = await response.json();
-        products = result.data;
+        products = result.data || result;
+        if (products.length > 0) {
+            localStorage.setItem('stmj_menuData', JSON.stringify(products));
+        }
     } catch (error) {
-        products = menuData;
+        console.log('API gagal, pakai localStorage');
+        products = getProducts();
     }
     
     let filtered = currentCategory === 'all' ? products : products.filter(item => item.category === currentCategory);
@@ -116,7 +128,8 @@ function filterByCategory(category) {
 function filterMenu() {
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
     const menuGrid = document.getElementById('menuGrid');
-    let baseMenu = currentCategory === 'all' ? menuData : menuData.filter(i => i.category === currentCategory);
+    const products = getProducts();
+    let baseMenu = currentCategory === 'all' ? products : products.filter(i => i.category === currentCategory);
     let filtered = baseMenu.filter(i => i.name.toLowerCase().includes(searchTerm));
     
     menuGrid.innerHTML = filtered.length === 0 
@@ -177,7 +190,8 @@ function showAddMenuModal() {
 }
 
 async function showEditMenuModal(id) {
-    let product = menuData.find(i => i.id === id);
+    const products = getProducts();
+    let product = products.find(i => i.id === id);
     try {
         const response = await fetch(API_URL + '/products/' + id);
         const result = await response.json();
@@ -230,19 +244,30 @@ async function saveMenu() {
         return;
     }
     
+    // Simpan ke localStorage
+    const products = getProducts();
+    if (id) {
+        const idx = products.findIndex(i => i.id === parseInt(id));
+        if (idx !== -1) {
+            products[idx] = { ...products[idx], ...data, id: parseInt(id) };
+        }
+    } else {
+        const newId = products.length > 0 ? Math.max(...products.map(m => m.id)) + 1 : 1;
+        products.push({ id: newId, ...data });
+    }
+    localStorage.setItem('stmj_menuData', JSON.stringify(products));
+    
+    // Coba simpan ke API
     try {
-        await fetch(API_URL + '/products' + (id ? '/' + id : ''), {
-            method: id ? 'PUT' : 'POST',
-            headers: {'Content-Type': 'application/json'},
+        const url = API_URL + '/products' + (id ? '/' + id : '');
+        const method = id ? 'PUT' : 'POST';
+        await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
     } catch(e) {
-        if (id) {
-            const idx = menuData.findIndex(i => i.id === parseInt(id));
-            if (idx !== -1) menuData[idx] = {...menuData[idx], ...data, id: parseInt(id)};
-        } else {
-            menuData.push({ id: Math.max(...menuData.map(m => m.id)) + 1, ...data });
-        }
+        console.log('API gagal, tersimpan di localStorage');
     }
     
     showToast(id ? 'Menu diupdate!' : 'Menu ditambahkan!', 'success');
@@ -258,12 +283,22 @@ function deleteMenu(id) {
 
 async function confirmDeleteMenu() {
     const id = pendingDeleteMenuId;
+    
+    // Hapus dari localStorage
+    const products = getProducts();
+    const idx = products.findIndex(i => i.id === id);
+    if (idx !== -1) {
+        products.splice(idx, 1);
+    }
+    localStorage.setItem('stmj_menuData', JSON.stringify(products));
+    
+    // Coba hapus dari API
     try {
         await fetch(API_URL + '/products/' + id, { method: 'DELETE' });
     } catch(e) {
-        const idx = menuData.findIndex(i => i.id === id);
-        if (idx !== -1) menuData.splice(idx, 1);
+        console.log('API gagal, terhapus dari localStorage');
     }
+    
     showToast('Menu dihapus!', 'error');
     closeDeleteMenuModal();
     renderMenu();
@@ -278,7 +313,8 @@ function closeDeleteMenuModal() {
 // CART
 // ============================================
 function addToCart(productId) {
-    const product = menuData.find(i => i.id === productId);
+    const products = getProducts();
+    const product = products.find(i => i.id === productId);
     if (!product) return;
     
     const existing = cart.find(i => i.id === productId);
@@ -447,7 +483,6 @@ function showStruk(orderId, total, orderItems) {
 }
 
 function downloadStruk() {
-    const orderId = document.getElementById('qrisOrderId').textContent;
     const strukText = document.getElementById('qrcode').innerText;
     const text = `STMJ NINGRAT\n${strukText}`;
     
