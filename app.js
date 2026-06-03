@@ -1,7 +1,7 @@
 // ============================================
 // STMJ NINGRAT - ALL IN ONE POS SYSTEM
 // ============================================
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'https://resample-negligee-cause.ngrok-free.dev/api';
 
 // ============================================
 // DATA MENU (FALLBACK)
@@ -53,7 +53,10 @@ window.onload = function() {
     renderMenu();
     updateCartCount();
     loadOrders();
-    setInterval(() => { loadOrders(); }, 5000);
+    setInterval(() => { 
+        loadOrders();
+        renderMenu();
+    }, 5000);
 };
 
 // ============================================
@@ -70,24 +73,31 @@ function switchMode(mode) {
 }
 
 // ============================================
-// RENDER MENU (API + FALLBACK)
+// RENDER MENU (API + FALLBACK + AUTO REFRESH)
 // ============================================
 async function renderMenu() {
     const menuGrid = document.getElementById('menuGrid');
     if (!menuGrid) return;
     
     let products = [];
+    let apiOnline = true;
+    
+    // SELALU coba API dulu dengan cache buster
     try {
-        const response = await fetch(API_URL + '/products');
+        const response = await fetch(API_URL + '/products?_=' + Date.now());
         const result = await response.json();
         products = result.data || result;
         if (products.length > 0) {
             localStorage.setItem('stmj_menuData', JSON.stringify(products));
         }
     } catch (error) {
-        console.log('API gagal, pakai localStorage');
+        console.log('API offline, pakai localStorage');
+        apiOnline = false;
         products = getProducts();
     }
+    
+    // Sembunyikan tombol edit/hapus kalau API offline
+    const editButtons = apiOnline ? '' : 'style="display:none;"';
     
     let filtered = currentCategory === 'all' ? products : products.filter(item => item.category === currentCategory);
     
@@ -98,7 +108,7 @@ async function renderMenu() {
                      onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22%3E%3Crect fill=%22%23fef3c7%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%2378350f%22 font-size=%2220%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22%3ESTMJ%3C/text%3E%3C/svg%3E'">
                 ${item.badge ? `<span class="menu-badge">${item.badge}</span>` : ''}
             </div>
-            <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition flex gap-1 z-10">
+            <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition flex gap-1 z-10" ${editButtons}>
                 <button onclick="event.stopPropagation();showEditMenuModal(${item.id})" class="bg-blue-500 text-white w-8 h-8 rounded-lg text-xs hover:bg-blue-600" title="Edit">
                     <i class="fas fa-pen"></i>
                 </button>
@@ -112,6 +122,24 @@ async function renderMenu() {
             </div>
         </div>
     `).join('');
+    
+    // Sembunyikan tombol tambah menu kalau API offline
+    const addBtn = document.querySelector('#menuMode .bg-green-600');
+    if (addBtn) {
+        addBtn.style.display = apiOnline ? '' : 'none';
+    }
+    
+    // Update banner
+    const offlineBanner = document.getElementById('offlineBanner');
+    if (offlineBanner) {
+        if (!apiOnline) {
+            offlineBanner.textContent = '📴 API Offline - Menu hanya bisa dilihat';
+            offlineBanner.classList.remove('bg-red-500', 'hidden');
+            offlineBanner.classList.add('bg-yellow-500', 'text-black');
+        } else {
+            offlineBanner.classList.add('hidden');
+        }
+    }
 }
 
 function filterByCategory(category) {
@@ -190,13 +218,15 @@ function showAddMenuModal() {
 }
 
 async function showEditMenuModal(id) {
-    const products = getProducts();
-    let product = products.find(i => i.id === id);
+    let product = null;
     try {
         const response = await fetch(API_URL + '/products/' + id);
         const result = await response.json();
-        if (result.data) product = result.data;
-    } catch(e) {}
+        product = result.data || result;
+    } catch(e) {
+        const products = getProducts();
+        product = products.find(i => i.id === id);
+    }
     
     if (!product) return;
     
@@ -244,35 +274,23 @@ async function saveMenu() {
         return;
     }
     
-    // Simpan ke localStorage
-    const products = getProducts();
-    if (id) {
-        const idx = products.findIndex(i => i.id === parseInt(id));
-        if (idx !== -1) {
-            products[idx] = { ...products[idx], ...data, id: parseInt(id) };
-        }
-    } else {
-        const newId = products.length > 0 ? Math.max(...products.map(m => m.id)) + 1 : 1;
-        products.push({ id: newId, ...data });
-    }
-    localStorage.setItem('stmj_menuData', JSON.stringify(products));
-    
-    // Coba simpan ke API
     try {
         const url = API_URL + '/products' + (id ? '/' + id : '');
         const method = id ? 'PUT' : 'POST';
-        await fetch(url, {
+        const response = await fetch(url, {
             method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
+        
+        if (response.ok) {
+            showToast(id ? 'Menu diupdate!' : 'Menu ditambahkan!', 'success');
+            closeMenuForm();
+            renderMenu();
+        }
     } catch(e) {
-        console.log('API gagal, tersimpan di localStorage');
+        showToast('API offline! Gagal menyimpan.', 'error');
     }
-    
-    showToast(id ? 'Menu diupdate!' : 'Menu ditambahkan!', 'success');
-    closeMenuForm();
-    renderMenu();
 }
 
 function deleteMenu(id) {
@@ -284,22 +302,13 @@ function deleteMenu(id) {
 async function confirmDeleteMenu() {
     const id = pendingDeleteMenuId;
     
-    // Hapus dari localStorage
-    const products = getProducts();
-    const idx = products.findIndex(i => i.id === id);
-    if (idx !== -1) {
-        products.splice(idx, 1);
-    }
-    localStorage.setItem('stmj_menuData', JSON.stringify(products));
-    
-    // Coba hapus dari API
     try {
         await fetch(API_URL + '/products/' + id, { method: 'DELETE' });
+        showToast('Menu dihapus!', 'error');
     } catch(e) {
-        console.log('API gagal, terhapus dari localStorage');
+        showToast('API offline! Gagal menghapus.', 'error');
     }
     
-    showToast('Menu dihapus!', 'error');
     closeDeleteMenuModal();
     renderMenu();
 }
