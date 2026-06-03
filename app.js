@@ -183,7 +183,7 @@ function filterMenu() {
 }
 
 // ============================================
-// IMAGE UPLOAD PREVIEW (BATAS 200KB)
+// IMAGE UPLOAD PREVIEW (KOMPRES + BATAS UKURAN)
 // ============================================
 function previewImage() {
     const file = document.getElementById('menuImageFile').files[0];
@@ -191,17 +191,32 @@ function previewImage() {
     const imageInput = document.getElementById('menuImage');
 
     if (file) {
-        if (file.size > 200000) {
-            showToast('Gambar terlalu besar! Maks 200KB', 'error');
+        if (file.size > 500000) {
+            showToast('Gambar terlalu besar! Maks 500KB', 'error');
             document.getElementById('menuImageFile').value = '';
             return;
         }
 
         const reader = new FileReader();
         reader.onload = function(e) {
-            preview.src = e.target.result;
-            preview.classList.remove('hidden');
-            imageInput.value = e.target.result;
+            // Kompres gambar sebelum simpan
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const maxWidth = 300;
+                const scale = maxWidth / img.width;
+                canvas.width = maxWidth;
+                canvas.height = img.height * scale;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                const compressed = canvas.toDataURL('image/jpeg', 0.5);
+                preview.src = compressed;
+                preview.classList.remove('hidden');
+                imageInput.value = compressed;
+            };
+            img.src = e.target.result;
         };
         reader.readAsDataURL(file);
     } else {
@@ -288,11 +303,7 @@ async function saveMenu() {
         return;
     }
 
-    if (data.image && data.image.length > 300000) {
-        showToast('Gambar terlalu besar! Maks 200KB', 'error');
-        return;
-    }
-
+    // Coba simpan ke API
     try {
         const url = API_URL + '/products' + (id ? '/' + id : '');
         const method = id ? 'PUT' : 'POST';
@@ -307,10 +318,34 @@ async function saveMenu() {
             closeMenuForm();
             renderMenu();
         } else {
-            showToast('Gagal! Gambar mungkin terlalu besar.', 'error');
+            // Kalau API gagal, simpan ke localStorage
+            const products = getProducts();
+            if (id) {
+                const idx = products.findIndex(i => i.id === parseInt(id));
+                if (idx !== -1) products[idx] = { ...products[idx], ...data, id: parseInt(id) };
+            } else {
+                const newId = products.length > 0 ? Math.max(...products.map(m => m.id)) + 1 : 1;
+                products.push({ id: newId, ...data });
+            }
+            localStorage.setItem('stmj_menuData', JSON.stringify(products));
+            showToast(id ? 'Menu diupdate (lokal)!' : 'Menu ditambahkan (lokal)!', 'success');
+            closeMenuForm();
+            renderMenu();
         }
     } catch(e) {
-        showToast('API offline! Gagal menyimpan.', 'error');
+        // Fallback ke localStorage
+        const products = getProducts();
+        if (id) {
+            const idx = products.findIndex(i => i.id === parseInt(id));
+            if (idx !== -1) products[idx] = { ...products[idx], ...data, id: parseInt(id) };
+        } else {
+            const newId = products.length > 0 ? Math.max(...products.map(m => m.id)) + 1 : 1;
+            products.push({ id: newId, ...data });
+        }
+        localStorage.setItem('stmj_menuData', JSON.stringify(products));
+        showToast('API offline! Tersimpan lokal.', 'success');
+        closeMenuForm();
+        renderMenu();
     }
 }
 
@@ -328,11 +363,14 @@ async function confirmDeleteMenu() {
             method: 'DELETE',
             headers: NGROK_HEADERS
         });
-        showToast('Menu dihapus!', 'error');
     } catch(e) {
-        showToast('API offline! Gagal menghapus.', 'error');
+        const products = getProducts();
+        const idx = products.findIndex(i => i.id === id);
+        if (idx !== -1) products.splice(idx, 1);
+        localStorage.setItem('stmj_menuData', JSON.stringify(products));
     }
 
+    showToast('Menu dihapus!', 'error');
     closeDeleteMenuModal();
     renderMenu();
 }
