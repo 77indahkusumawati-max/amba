@@ -90,7 +90,6 @@ async function renderMenu() {
     let products = [];
     let apiOnline = true;
 
-    // SELALU coba API dulu dengan cache buster
     try {
         const response = await fetch(API_URL + '/products?_=' + Date.now(), {
             headers: NGROK_HEADERS
@@ -106,7 +105,6 @@ async function renderMenu() {
         products = getProducts();
     }
 
-    // Sembunyikan tombol edit/hapus kalau API offline
     const editButtons = apiOnline ? '' : 'style="display:none;"';
 
     let filtered = currentCategory === 'all' ? products : products.filter(item => item.category === currentCategory);
@@ -133,13 +131,11 @@ async function renderMenu() {
         </div>
     `).join('');
 
-    // Sembunyikan tombol tambah menu kalau API offline
     const addBtn = document.querySelector('#menuMode .bg-green-600');
     if (addBtn) {
         addBtn.style.display = apiOnline ? '' : 'none';
     }
 
-    // Update banner
     const offlineBanner = document.getElementById('offlineBanner');
     if (offlineBanner) {
         if (!apiOnline) {
@@ -187,7 +183,7 @@ function filterMenu() {
 }
 
 // ============================================
-// IMAGE UPLOAD PREVIEW
+// IMAGE UPLOAD PREVIEW (BATAS 200KB)
 // ============================================
 function previewImage() {
     const file = document.getElementById('menuImageFile').files[0];
@@ -195,6 +191,12 @@ function previewImage() {
     const imageInput = document.getElementById('menuImage');
 
     if (file) {
+        if (file.size > 200000) {
+            showToast('Gambar terlalu besar! Maks 200KB', 'error');
+            document.getElementById('menuImageFile').value = '';
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = function(e) {
             preview.src = e.target.result;
@@ -286,6 +288,11 @@ async function saveMenu() {
         return;
     }
 
+    if (data.image && data.image.length > 300000) {
+        showToast('Gambar terlalu besar! Maks 200KB', 'error');
+        return;
+    }
+
     try {
         const url = API_URL + '/products' + (id ? '/' + id : '');
         const method = id ? 'PUT' : 'POST';
@@ -299,6 +306,8 @@ async function saveMenu() {
             showToast(id ? 'Menu diupdate!' : 'Menu ditambahkan!', 'success');
             closeMenuForm();
             renderMenu();
+        } else {
+            showToast('Gagal! Gambar mungkin terlalu besar.', 'error');
         }
     } catch(e) {
         showToast('API offline! Gagal menyimpan.', 'error');
