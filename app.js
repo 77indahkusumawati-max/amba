@@ -4,6 +4,14 @@
 const API_URL = 'https://resample-negligee-cause.ngrok-free.dev/api';
 
 // ============================================
+// HEADER UNTUK NGROK GRATIS
+// ============================================
+const NGROK_HEADERS = {
+    'ngrok-skip-browser-warning': 'true',
+    'Content-Type': 'application/json'
+};
+
+// ============================================
 // DATA MENU (FALLBACK)
 // ============================================
 const menuData = [
@@ -53,7 +61,7 @@ window.onload = function() {
     renderMenu();
     updateCartCount();
     loadOrders();
-    setInterval(() => { 
+    setInterval(() => {
         loadOrders();
         renderMenu();
     }, 5000);
@@ -78,13 +86,15 @@ function switchMode(mode) {
 async function renderMenu() {
     const menuGrid = document.getElementById('menuGrid');
     if (!menuGrid) return;
-    
+
     let products = [];
     let apiOnline = true;
-    
+
     // SELALU coba API dulu dengan cache buster
     try {
-        const response = await fetch(API_URL + '/products?_=' + Date.now());
+        const response = await fetch(API_URL + '/products?_=' + Date.now(), {
+            headers: NGROK_HEADERS
+        });
         const result = await response.json();
         products = result.data || result;
         if (products.length > 0) {
@@ -95,12 +105,12 @@ async function renderMenu() {
         apiOnline = false;
         products = getProducts();
     }
-    
+
     // Sembunyikan tombol edit/hapus kalau API offline
     const editButtons = apiOnline ? '' : 'style="display:none;"';
-    
+
     let filtered = currentCategory === 'all' ? products : products.filter(item => item.category === currentCategory);
-    
+
     menuGrid.innerHTML = filtered.map(item => `
         <div class="menu-card group">
             <div class="menu-image-container" onclick="addToCart(${item.id})">
@@ -122,13 +132,13 @@ async function renderMenu() {
             </div>
         </div>
     `).join('');
-    
+
     // Sembunyikan tombol tambah menu kalau API offline
     const addBtn = document.querySelector('#menuMode .bg-green-600');
     if (addBtn) {
         addBtn.style.display = apiOnline ? '' : 'none';
     }
-    
+
     // Update banner
     const offlineBanner = document.getElementById('offlineBanner');
     if (offlineBanner) {
@@ -159,8 +169,8 @@ function filterMenu() {
     const products = getProducts();
     let baseMenu = currentCategory === 'all' ? products : products.filter(i => i.category === currentCategory);
     let filtered = baseMenu.filter(i => i.name.toLowerCase().includes(searchTerm));
-    
-    menuGrid.innerHTML = filtered.length === 0 
+
+    menuGrid.innerHTML = filtered.length === 0
         ? `<div class="col-span-full text-center py-12"><i class="fas fa-search text-5xl text-gray-300"></i><p>Tak ditemukan</p></div>`
         : filtered.map(item => `
             <div class="menu-card" onclick="addToCart(${item.id})">
@@ -183,7 +193,7 @@ function previewImage() {
     const file = document.getElementById('menuImageFile').files[0];
     const preview = document.getElementById('imagePreview');
     const imageInput = document.getElementById('menuImage');
-    
+
     if (file) {
         const reader = new FileReader();
         reader.onload = function(e) {
@@ -220,16 +230,18 @@ function showAddMenuModal() {
 async function showEditMenuModal(id) {
     let product = null;
     try {
-        const response = await fetch(API_URL + '/products/' + id);
+        const response = await fetch(API_URL + '/products/' + id, {
+            headers: NGROK_HEADERS
+        });
         const result = await response.json();
         product = result.data || result;
     } catch(e) {
         const products = getProducts();
         product = products.find(i => i.id === id);
     }
-    
+
     if (!product) return;
-    
+
     document.getElementById('menuFormTitle').textContent = '✏️ Edit Menu';
     document.getElementById('saveBtnText').textContent = 'Update';
     document.getElementById('editMenuId').value = product.id;
@@ -241,7 +253,7 @@ async function showEditMenuModal(id) {
     document.getElementById('menuImage').value = product.image || '';
     document.getElementById('menuBadge').value = product.badge || '';
     document.getElementById('menuImageFile').value = '';
-    
+
     const preview = document.getElementById('imagePreview');
     if (product.image) {
         preview.src = product.image;
@@ -249,7 +261,7 @@ async function showEditMenuModal(id) {
     } else {
         preview.classList.add('hidden');
     }
-    
+
     document.getElementById('menuFormModal').classList.remove('hidden');
 }
 
@@ -268,21 +280,21 @@ async function saveMenu() {
         image: document.getElementById('menuImage').value,
         badge: document.getElementById('menuBadge').value.trim()
     };
-    
+
     if (!data.name || !data.price) {
         showToast('Nama & harga wajib!', 'error');
         return;
     }
-    
+
     try {
         const url = API_URL + '/products' + (id ? '/' + id : '');
         const method = id ? 'PUT' : 'POST';
         const response = await fetch(url, {
             method: method,
-            headers: { 'Content-Type': 'application/json' },
+            headers: NGROK_HEADERS,
             body: JSON.stringify(data)
         });
-        
+
         if (response.ok) {
             showToast(id ? 'Menu diupdate!' : 'Menu ditambahkan!', 'success');
             closeMenuForm();
@@ -301,14 +313,17 @@ function deleteMenu(id) {
 
 async function confirmDeleteMenu() {
     const id = pendingDeleteMenuId;
-    
+
     try {
-        await fetch(API_URL + '/products/' + id, { method: 'DELETE' });
+        await fetch(API_URL + '/products/' + id, {
+            method: 'DELETE',
+            headers: NGROK_HEADERS
+        });
         showToast('Menu dihapus!', 'error');
     } catch(e) {
         showToast('API offline! Gagal menghapus.', 'error');
     }
-    
+
     closeDeleteMenuModal();
     renderMenu();
 }
@@ -325,14 +340,14 @@ function addToCart(productId) {
     const products = getProducts();
     const product = products.find(i => i.id === productId);
     if (!product) return;
-    
+
     const existing = cart.find(i => i.id === productId);
     if (existing) {
         existing.quantity++;
     } else {
         cart.push({ id: product.id, name: product.name, price: product.price, quantity: 1 });
     }
-    
+
     saveCart();
     updateCartCount();
     showToast(product.name + ' ditambahkan!');
@@ -348,13 +363,13 @@ function removeFromCart(productId) {
 function updateQuantity(productId, change) {
     const item = cart.find(i => i.id === productId);
     if (!item) return;
-    
+
     item.quantity += change;
     if (item.quantity <= 0) {
         removeFromCart(productId);
         return;
     }
-    
+
     saveCart();
     updateCartCount();
     viewCart();
@@ -381,7 +396,7 @@ function calculateTotal() {
 
 function viewCart() {
     const content = document.getElementById('cartContent');
-    
+
     if (cart.length === 0) {
         content.innerHTML = `<div class="text-center py-10"><i class="fas fa-shopping-cart text-5xl text-gray-300"></i><p>Keranjang kosong</p></div>`;
     } else {
@@ -430,11 +445,11 @@ function createOrder() {
         showToast('Keranjang kosong!', 'error');
         return;
     }
-    
+
     const orderId = 'STMJ-' + Date.now().toString().slice(-8);
     const total = calculateTotal();
     const orderItems = [...cart];
-    
+
     orders.unshift({
         id: orderId,
         items: orderItems,
@@ -443,15 +458,15 @@ function createOrder() {
         timestamp: new Date().toISOString(),
         paymentMethod: 'TUNAI'
     });
-    
+
     localStorage.setItem('stmj_orders', JSON.stringify(orders));
     showStruk(orderId, total, orderItems);
-    
+
     cart = [];
     saveCart();
     updateCartCount();
     closeCart();
-    
+
     showToast('Pesanan berhasil!');
     loadOrders();
 }
@@ -459,7 +474,7 @@ function createOrder() {
 function showStruk(orderId, total, orderItems) {
     document.getElementById('qrisTotal').textContent = 'Rp ' + total.toLocaleString();
     document.getElementById('qrisOrderId').textContent = orderId;
-    
+
     let itemsHtml = '';
     if (orderItems && orderItems.length > 0) {
         itemsHtml = orderItems.map(item => `
@@ -469,7 +484,7 @@ function showStruk(orderId, total, orderItems) {
             </div>
         `).join('');
     }
-    
+
     document.getElementById('qrcode').innerHTML = `
         <div style="font-family:monospace; font-size:11px; line-height:1.5;">
             <div style="text-align:center;">
@@ -487,20 +502,20 @@ function showStruk(orderId, total, orderItems) {
             <div style="text-align:center; font-size:10px;">Terima Kasih 🍵</div>
         </div>
     `;
-    
+
     document.getElementById('qrisModal').classList.remove('hidden');
 }
 
 function downloadStruk() {
     const strukText = document.getElementById('qrcode').innerText;
     const text = `STMJ NINGRAT\n${strukText}`;
-    
+
     navigator.clipboard.writeText(text).then(() => {
         showToast('Struk dicopy! 📋');
     }).catch(() => {
         showToast('Gagal copy struk', 'error');
     });
-    
+
     setTimeout(() => {
         closeQRIS();
     }, 1500);
@@ -509,7 +524,7 @@ function downloadStruk() {
 async function shareStruk() {
     const strukText = document.getElementById('qrcode').innerText;
     const waText = `🧾 Struk STMJ Ningrat\n${strukText}\nTerima Kasih 🍵👑`;
-    
+
     if (navigator.share) {
         try {
             await navigator.share({
@@ -521,14 +536,14 @@ async function shareStruk() {
             console.log('Native share gagal');
         }
     }
-    
+
     try {
         await navigator.clipboard.writeText(waText);
         showToast('Dicopy! Membuka WhatsApp... 📋');
     } catch(e) {
         showToast('Gagal!', 'error');
     }
-    
+
     setTimeout(() => {
         window.open(`https://wa.me/?text=${encodeURIComponent(waText)}`, '_blank');
     }, 800);
@@ -552,17 +567,17 @@ function updateStats() {
     const pending = orders.filter(o => o.status === 'pending').length;
     const processing = orders.filter(o => o.status === 'processing').length;
     const ready = orders.filter(o => o.status === 'ready').length;
-    
+
     const today = new Date().toDateString();
     const revenue = orders
         .filter(o => new Date(o.timestamp).toDateString() === today && o.status === 'ready')
         .reduce((sum, o) => sum + Number(o.total || 0), 0);
-    
+
     document.getElementById('pendingCount').textContent = pending;
     document.getElementById('processingCount').textContent = processing;
     document.getElementById('readyCount').textContent = ready;
     document.getElementById('totalRevenue').textContent = 'Rp ' + revenue.toLocaleString();
-    
+
     const notif = document.getElementById('orderNotif');
     if (pending > 0) {
         notif.textContent = pending;
@@ -609,37 +624,37 @@ function renderOrders() {
     const list = document.getElementById('ordersList');
     const empty = document.getElementById('emptyOrders');
     let filtered = currentOrderFilter === 'all' ? orders : orders.filter(o => o.status === currentOrderFilter);
-    
+
     if (filtered.length === 0) {
         list.innerHTML = '';
         empty.classList.remove('hidden');
         return;
     }
-    
+
     empty.classList.add('hidden');
-    
+
     const statusLabels = { pending: 'MENUNGGU', processing: 'DIPROSES', ready: 'SELESAI' };
     const statusClasses = { pending: 'status-pending', processing: 'status-processing', ready: 'status-ready' };
-    
+
     list.innerHTML = filtered.map(order => {
         const orderId = order.order_number || order.id;
         const orderTotal = Number(order.total || 0);
         const orderTime = order.created_at || order.timestamp;
-        
+
         const itemsHtml = (order.items || []).map(item => `
             <div class="flex justify-between text-sm py-1">
                 <span>${item.quantity}x ${item.product_name || item.name}</span>
                 <span>Rp ${(Number(item.price) * item.quantity).toLocaleString()}</span>
             </div>
         `).join('');
-        
+
         let actionBtn = '';
         if (order.status === 'pending') {
             actionBtn = `<button onclick="updateOrderStatus('${orderId}','processing')" class="bg-blue-500 text-white px-3 py-1 rounded-lg font-bold text-sm">Proses</button>`;
         } else if (order.status === 'processing') {
             actionBtn = `<button onclick="updateOrderStatus('${orderId}','ready')" class="bg-green-500 text-white px-3 py-1 rounded-lg font-bold text-sm">Siap</button>`;
         }
-        
+
         return `
             <div class="bg-white rounded-xl shadow-md p-4 border-l-4 ${order.status === 'pending' ? 'border-yellow-500' : order.status === 'processing' ? 'border-blue-500' : 'border-green-500'}">
                 <div class="flex justify-between flex-wrap gap-3">
@@ -661,7 +676,7 @@ function renderOrders() {
             </div>
         `;
     }).join('');
-    
+
     showDailyTotal();
 }
 
@@ -669,7 +684,7 @@ function showDailyTotal() {
     const today = new Date().toDateString();
     const todayOrders = orders.filter(o => new Date(o.timestamp).toDateString() === today && o.status === 'ready');
     const totalRevenue = todayOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
-    
+
     const itemSales = {};
     todayOrders.forEach(order => {
         (order.items || []).forEach(item => {
@@ -677,15 +692,15 @@ function showDailyTotal() {
             itemSales[name] = (itemSales[name] || 0) + item.quantity;
         });
     });
-    
+
     const salesHtml = Object.entries(itemSales)
         .sort((a, b) => b[1] - a[1])
         .map(([name, qty]) => `<div class="flex justify-between text-sm"><span>${qty}x ${name}</span></div>`)
         .join('');
-    
+
     const old = document.getElementById('dailyTotal');
     if (old) old.remove();
-    
+
     const dailyTotalDiv = document.createElement('div');
     dailyTotalDiv.id = 'dailyTotal';
     dailyTotalDiv.innerHTML = `
@@ -702,7 +717,7 @@ function showDailyTotal() {
             </div>
         </div>
     `;
-    
+
     document.getElementById('ordersList').after(dailyTotalDiv);
 }
 
@@ -754,20 +769,20 @@ function closeDeleteModal() {
 function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
     if (!toast) return;
-    
+
     document.getElementById('toastMessage').textContent = message;
-    
+
     const icons = {
         success: 'fa-check-circle text-green-400',
         error: 'fa-exclamation-circle text-red-400',
         warning: 'fa-bell text-yellow-400'
     };
-    
+
     document.getElementById('toastIcon').className = 'fas ' + (icons[type] || icons.success);
-    
+
     toast.classList.remove('translate-y-20', 'opacity-0');
     toast.classList.add('translate-y-0', 'opacity-100');
-    
+
     setTimeout(() => {
         toast.classList.add('translate-y-20', 'opacity-0');
     }, 3000);
